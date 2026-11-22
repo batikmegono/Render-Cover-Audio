@@ -1,0 +1,1575 @@
+```html
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cover Video Studio — Render Cepat YouTube Musik</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- MP4 Muxer untuk Render MP4 Cepat via WebCodecs -->
+    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        studio: {
+                            950: '#09090b',
+                            900: '#121216',
+                            850: '#18181d',
+                            800: '#222229',
+                            700: '#2e2e38',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #09090b;
+            color: #f4f4f5;
+        }
+        /* Custom scrollbar rapi */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121216;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2e2e38;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f4e;
+        }
+        /* Range slider styling */
+        input[type="range"] {
+            accent-color: #6366f1;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-studio-950 text-zinc-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-200 overflow-x-hidden">
+
+    <!-- Toast Notification Container (Pengganti alert) -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full px-4 sm:px-0 pointer-events-none"></div>
+
+    <!-- Header / Top Bar -->
+    <header class="sticky top-0 z-30 border-b border-zinc-800/80 bg-studio-950/90 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-rose-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                    <!-- Icon Play + Music -->
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">Cover Video Studio</h1>
+                    <p class="text-xs text-zinc-400">Tempel Cover & Render Cepat YouTube Long (Hingga 2+ Jam)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button id="btn-load-demo" type="button" class="px-3 py-2 text-xs font-medium rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 border border-zinc-700/70 transition flex items-center gap-1.5 cursor-pointer">
+                    <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <span>Coba Demo Cepat</span>
+                </button>
+                <span id="codec-badge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    WebCodecs Ready
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace: 2 Kolom Fokus (Kiri: Cover Studio, Kanan: Audio & Render Cepat) -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- ========================================================= -->
+        <!-- KOLOM KIRI (7 cols): PENEMPELAN COVER & PREVIEW 16:9       -->
+        <!-- ========================================================= -->
+        <section class="lg:col-span-7 flex flex-col gap-5">
+
+            <!-- Kartu Preview Canvas 16:9 -->
+            <div class="bg-studio-900 border border-zinc-800/90 rounded-2xl p-4 sm:p-5 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg bg-indigo-500/15 text-indigo-400 text-xs font-bold flex items-center justify-center">1</span>
+                        <h2 class="text-sm sm:text-base font-semibold text-white">Penempelan Cover (16:9 YouTube)</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-download-cover" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer">
+                            Simpan Cover PNG
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dropzone & Responsive 16:9 Canvas Container -->
+                <div id="cover-dropzone" class="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-950 border-2 border-dashed border-zinc-800 hover:border-indigo-500/60 transition group">
+                    <canvas id="preview-canvas" class="w-full h-full block"></canvas>
+
+                    <!-- Overlay upload saat belum ada gambar -->
+                    <div id="cover-empty-overlay" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-950/75 backdrop-blur-[2px] cursor-pointer transition group-hover:bg-zinc-950/60">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center mb-3 text-indigo-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-semibold text-white">Klik atau Tarik Gambar Cover ke Sini</p>
+                        <p class="text-xs text-zinc-400 mt-1">JPG, PNG, WEBP — Otomatis rapi ke rasio YouTube 16:9</p>
+                    </div>
+
+                    <!-- Tombol ganti gambar melayang saat gambar sudah ada -->
+                    <button id="btn-change-cover" type="button" class="hidden absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-white text-xs font-medium backdrop-blur-md border border-white/15 transition cursor-pointer">
+                        Ganti Gambar
+                    </button>
+                    <input id="cover-file-input" type="file" accept="image/*" class="hidden">
+                </div>
+
+                <!-- Kontrol Penempelan Cover Cepat -->
+                <div class="mt-4 space-y-4">
+                    <!-- Pilihan Mode Fit Cover -->
+                    <div>
+                        <label class="block text-xs font-medium text-zinc-400 mb-2">Mode Penempelan Cover</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" data-fit="blur" class="fit-mode-btn px-3 py-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer bg-indigo-600/20 border-indigo-500 text-indigo-300">
+                                Blur BG (Album)
+                            </button>
+                            <button type="button" data-fit="cover" class="fit-mode-btn px-3 py-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer bg-studio-850 border-zinc-800 text-zinc-400 hover:text-zinc-200">
+                                Penuh (Crop)
+                            </button>
+                            <button type="button" data-fit="contain" class="fit-mode-btn px-3 py-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer bg-studio-850 border-zinc-800 text-zinc-400 hover:text-zinc-200">
+                                Fit Hitam
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Slider Zoom, Posisi Y & Gelap Background -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-studio-850/70 p-3.5 rounded-xl border border-zinc-800/70">
+                        <div>
+                            <div class="flex justify-between text-[11px] text-zinc-400 mb-1">
+                                <span>Zoom Cover</span>
+                                <span id="val-zoom" class="text-zinc-200 font-medium">100%</span>
+                            </div>
+                            <input id="range-zoom" type="range" min="60" max="180" value="100" class="w-full h-1.5 bg-zinc-700 rounded-lg cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[11px] text-zinc-400 mb-1">
+                                <span>Geser Atas/Bawah</span>
+                                <span id="val-offset-y" class="text-zinc-200 font-medium">0%</span>
+                            </div>
+                            <input id="range-offset-y" type="range" min="-50" max="50" value="0" class="w-full h-1.5 bg-zinc-700 rounded-lg cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[11px] text-zinc-400 mb-1">
+                                <span>Vignette / Gelap</span>
+                                <span id="val-dim" class="text-zinc-200 font-medium">15%</span>
+                            </div>
+                            <input id="range-dim" type="range" min="0" max="75" value="15" class="w-full h-1.5 bg-zinc-700 rounded-lg cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- Opsi Teks Judul di Cover (Opsional) -->
+                    <div class="bg-studio-850/70 p-3.5 rounded-xl border border-zinc-800/70">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <label for="toggle-text" class="text-xs font-semibold text-zinc-200 flex items-center gap-2 cursor-pointer">
+                                <input id="toggle-text" type="checkbox" class="w-4 h-4 rounded accent-indigo-500 cursor-pointer">
+                                <span>Tambahkan Teks Judul di Cover</span>
+                            </label>
+                            <select id="select-text-pos" class="text-xs bg-studio-900 border border-zinc-700 rounded-lg px-2 py-1 text-zinc-300 focus:outline-none focus:border-indigo-500">
+                                <option value="bottom">Posisi Bawah</option>
+                                <option value="center">Posisi Tengah</option>
+                                <option value="top">Posisi Atas</option>
+                            </select>
+                        </div>
+                        <div id="text-inputs-wrap" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 opacity-50 pointer-events-none transition">
+                            <input id="input-title" type="text" placeholder="Judul: Lofi Relaxing Beats..." class="w-full px-3 py-2 rounded-lg bg-studio-900 border border-zinc-700/80 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500">
+                            <input id="input-subtitle" type="text" placeholder="Subjudul: 2 Hours Study & Sleep Music" class="w-full px-3 py-2 rounded-lg bg-studio-900 border border-zinc-700/80 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Tips Kecepatan Render -->
+            <div class="bg-indigo-950/25 border border-indigo-500/20 rounded-2xl p-4 flex items-start gap-3">
+                <svg class="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="text-xs text-zinc-300 leading-relaxed">
+                    <strong class="text-indigo-300">Rahasia Render Cepat Video Musik YouTube:</strong> Karena gambar cover bersifat statis, pengaturan default <strong>1 FPS</strong> membuat proses render <strong>30x lebih cepat</strong> dan ukuran file jauh lebih kecil tanpa mengurangi kejernihan gambar HD maupun kualitas audio di YouTube.
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- KOLOM KANAN (5 cols): AUDIO PLAYLIST & MESIN RENDER CEPAT  -->
+        <!-- ========================================================= -->
+        <section class="lg:col-span-5 flex flex-col gap-5">
+
+            <!-- Kartu 2: Musik / Audio (Bisa 1 Lagu Panjang atau Playlist + Auto-Loop 2 Jam) -->
+            <div class="bg-studio-900 border border-zinc-800/90 rounded-2xl p-4 sm:p-5 shadow-xl">
+                <div class="flex items-center justify-between gap-2 mb-3.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg bg-rose-500/15 text-rose-400 text-xs font-bold flex items-center justify-center">2</span>
+                        <h2 class="text-sm sm:text-base font-semibold text-white">Musik / Audio (Hingga 2+ Jam)</h2>
+                    </div>
+                    <span id="total-duration-badge" class="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-300 text-xs font-mono font-semibold">
+                        00:00:00
+                    </span>
+                </div>
+
+                <!-- Dropzone Audio -->
+                <div id="audio-dropzone" class="border-2 border-dashed border-zinc-800 hover:border-rose-500/60 rounded-xl p-4 text-center cursor-pointer transition bg-studio-950/60">
+                    <p class="text-xs sm:text-sm font-medium text-zinc-200">+ Tambah File Musik (MP3, WAV, M4A, OGG)</p>
+                    <p class="text-[11px] text-zinc-400 mt-1">Bisa pilih 1 file panjang (2 jam) atau banyak lagu sekaligus</p>
+                    <input id="audio-file-input" type="file" accept="audio/*" multiple class="hidden">
+                </div>
+
+                <!-- Daftar Audio -->
+                <div id="audio-list-container" class="mt-3 max-h-44 overflow-y-auto space-y-1.5 hidden"></div>
+
+                <!-- Tombol Salin Tracklist YouTube (muncul jika >= 1 audio) -->
+                <div id="tracklist-actions" class="hidden mt-3 flex items-center justify-between gap-2">
+                    <button id="btn-copy-timestamps" type="button" class="text-[11px] font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Salin Timestamp YouTube
+                    </button>
+                    <button id="btn-clear-audio" type="button" class="text-[11px] font-medium text-rose-400 hover:text-rose-300 cursor-pointer">
+                        Hapus Semua
+                    </button>
+                </div>
+
+                <!-- Pengaturan Auto-Loop Durasi Target -->
+                <div class="mt-4 pt-3.5 border-t border-zinc-800/80">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <label for="select-duration-mode" class="text-xs font-medium text-zinc-300">Target Durasi Video</label>
+                        <span id="loop-info-text" class="text-[11px] text-zinc-400">Sesuai panjang audio</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <select id="select-duration-mode" class="flex-1 bg-studio-850 border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            <option value="original">Sesuai Panjang Audio Asli</option>
+                            <option value="30">Auto-Loop ke 30 Menit</option>
+                            <option value="60">Auto-Loop ke 1 Jam (60 Menit)</option>
+                            <option value="120">Auto-Loop ke 2 Jam (120 Menit)</option>
+                            <option value="custom">Custom (Menit)...</option>
+                        </select>
+                        <input id="input-custom-minutes" type="number" min="1" max="600" value="120" placeholder="Menit" class="hidden w-24 bg-studio-850 border border-zinc-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kartu 3: Pengaturan & Eksekusi Render Cepat -->
+            <div class="bg-studio-900 border border-zinc-800/90 rounded-2xl p-4 sm:p-5 shadow-xl">
+                <div class="flex items-center gap-2 mb-3.5">
+                    <span class="w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-400 text-xs font-bold flex items-center justify-center">3</span>
+                    <h2 class="text-sm sm:text-base font-semibold text-white">Pengaturan & Render Cepat</h2>
+                </div>
+
+                <!-- Opsi Resolusi, FPS, Bitrate Audio -->
+                <div class="grid grid-cols-3 gap-2.5 mb-4">
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Resolusi</label>
+                        <select id="select-resolution" class="w-full bg-studio-850 border border-zinc-700/80 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            <option value="1920x1080">1080p HD</option>
+                            <option value="1280x720">720p Cepat</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">FPS (Speed)</label>
+                        <select id="select-fps" class="w-full bg-studio-850 border border-zinc-700/80 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            <option value="1" selected>1 FPS (Turbo)</option>
+                            <option value="2">2 FPS (Cepat)</option>
+                            <option value="5">5 FPS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-zinc-400 mb-1">Audio</label>
+                        <select id="select-audio-bitrate" class="w-full bg-studio-850 border border-zinc-700/80 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            <option value="192000" selected>192 kbps</option>
+                            <option value="128000">128 kbps</option>
+                            <option value="256000">256 kbps</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Tab Pilihan Mode Render -->
+                <div class="grid grid-cols-2 gap-1.5 p-1 bg-studio-950 rounded-xl border border-zinc-800 mb-4">
+                    <button id="tab-browser-render" type="button" class="py-2 px-3 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow transition cursor-pointer">
+                        Render di Browser
+                    </button>
+                    <button id="tab-turbo-script" type="button" class="py-2 px-3 rounded-lg text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition cursor-pointer">
+                        Turbo PC (2 Jam ~15 dtk)
+                    </button>
+                </div>
+
+                <!-- PANEL A: Render Langsung di Browser (WebCodecs MP4) -->
+                <div id="panel-browser-render" class="space-y-3">
+                    <!-- Peringatan RAM jika durasi sangat panjang -->
+                    <div id="ram-warning" class="hidden p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-200 leading-relaxed">
+                        <strong>Info Durasi Panjang:</strong> Video di atas 45 menit dapat memakan memori browser cukup besar. Anda tetap bisa render di sini (disarankan 1 FPS & 720p), atau gunakan tab <strong>Turbo PC</strong> untuk render 2 jam dalam ~15 detik tanpa batas RAM.
+                    </div>
+
+                    <!-- Progress Area (Muncul saat proses render) -->
+                    <div id="render-progress-box" class="hidden bg-studio-950 border border-zinc-800 rounded-xl p-3.5 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span id="render-status-text" class="font-medium text-indigo-300">Menyiapkan mesin render...</span>
+                            <span id="render-percent-text" class="font-mono font-bold text-white">0%</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
+                            <div id="render-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-150" style="width: 0%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-zinc-400">
+                            <span id="render-detail-text">Menunggu...</span>
+                            <button id="btn-cancel-render" type="button" class="text-rose-400 hover:text-rose-300 font-medium cursor-pointer">Batalkan</button>
+                        </div>
+                    </div>
+
+                    <!-- Hasil Video MP4 (Muncul setelah selesai) -->
+                    <div id="render-result-box" class="hidden bg-emerald-950/25 border border-emerald-500/30 rounded-xl p-3.5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-emerald-300">Render MP4 Selesai!</p>
+                                <p id="result-meta-text" class="text-[11px] text-zinc-400 mt-0.5">Siap upload ke YouTube</p>
+                            </div>
+                            <a id="btn-download-mp4" href="#" download="youtube_music_video.mp4" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20">
+                                Download MP4
+                            </a>
+                        </div>
+                        <video id="result-video-preview" controls class="w-full rounded-lg bg-black max-h-40"></video>
+                    </div>
+
+                    <!-- Tombol Mulai Render -->
+                    <button id="btn-start-render" type="button" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2 cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Render Video MP4 Sekarang</span>
+                    </button>
+                </div>
+
+                <!-- PANEL B: Mode Turbo PC (FFmpeg 1-Klik untuk 2 Jam Super Cepat) -->
+                <div id="panel-turbo-script" class="hidden space-y-3">
+                    <div class="p-3.5 rounded-xl bg-studio-950 border border-zinc-800 text-xs text-zinc-300 space-y-2 leading-relaxed">
+                        <p class="font-semibold text-emerald-400">Khusus Video 1 - 2+ Jam (Selesai ~15 Detik!)</p>
+                        <p class="text-zinc-400">Audio langsung digabung tanpa re-encode ulang (<code class="text-zinc-200">-c:a copy</code>) dengan mode gambar statis (<code class="text-zinc-200">-tune stillimage</code>). Tidak memakan RAM browser sama sekali.</p>
+                        <ol class="list-decimal list-inside text-[11px] text-zinc-400 space-y-1 pt-1">
+                            <li>Klik tombol di bawah untuk mengunduh <strong>Cover 16:9 (cover_yt.png)</strong> dan <strong>Script Render</strong>.</li>
+                            <li>Letakkan kedua file tersebut di folder yang sama dengan file musik Anda.</li>
+                            <li>Klik 2x file <code class="text-indigo-300">RENDER_YOUTUBE.bat</code> (Windows) atau jalankan di Terminal (Mac/Linux).</li>
+                        </ol>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button id="btn-download-win-pack" type="button" class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>Unduh Paket Windows (.BAT)</span>
+                        </button>
+                        <button id="btn-download-mac-pack" type="button" class="py-3 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold text-xs border border-zinc-700 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>Unduh Paket Mac/Linux (.SH)</span>
+                        </button>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] text-zinc-400">Preview Perintah FFmpeg:</span>
+                            <button id="btn-copy-ffmpeg" type="button" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer">Salin Perintah</button>
+                        </div>
+                        <pre id="ffmpeg-preview-code" class="p-2.5 rounded-xl bg-black border border-zinc-800 text-[10px] font-mono text-emerald-300 overflow-x-auto whitespace-pre-wrap break-all max-h-28"></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- LOGIKA APLIKASI (COVER STUDIO + WEBCODECS FAST RENDERER)   -->
+    <!-- ========================================================= -->
+    <script>
+        (function () {
+            'use strict';
+
+            // =====================================================
+            // 1. STATE APLIKASI
+            // =====================================================
+            const state = {
+                coverImage: null,          // HTMLImageElement
+                coverFileName: 'cover_yt.png',
+                fitMode: 'blur',           // 'blur' | 'cover' | 'contain'
+                zoom: 100,                 // 60 - 180
+                offsetY: 0,                // -50 - 50
+                dim: 15,                   // 0 - 75 (%)
+                showText: false,
+                textPos: 'bottom',         // 'top' | 'center' | 'bottom'
+                titleText: '',
+                subtitleText: '',
+
+                audioTracks: [],           // Array of { id, file, name, duration, audioBuffer? }
+                durationMode: 'original',  // 'original' | '30' | '60' | '120' | 'custom'
+                customMinutes: 120,
+
+                isRendering: false,
+                cancelRequested: false,
+                lastResultUrl: null
+            };
+
+            // =====================================================
+            // 2. REFERENSI ELEMEN DOM
+            // =====================================================
+            const els = {
+                toastContainer: document.getElementById('toast-container'),
+                codecBadge: document.getElementById('codec-badge'),
+                btnLoadDemo: document.getElementById('btn-load-demo'),
+
+                // Cover
+                coverDropzone: document.getElementById('cover-dropzone'),
+                previewCanvas: document.getElementById('preview-canvas'),
+                coverEmptyOverlay: document.getElementById('cover-empty-overlay'),
+                btnChangeCover: document.getElementById('btn-change-cover'),
+                coverFileInput: document.getElementById('cover-file-input'),
+                btnDownloadCover: document.getElementById('btn-download-cover'),
+                fitModeBtns: document.querySelectorAll('.fit-mode-btn'),
+                rangeZoom: document.getElementById('range-zoom'),
+                valZoom: document.getElementById('val-zoom'),
+                rangeOffsetY: document.getElementById('range-offset-y'),
+                valOffsetY: document.getElementById('val-offset-y'),
+                rangeDim: document.getElementById('range-dim'),
+                valDim: document.getElementById('val-dim'),
+                toggleText: document.getElementById('toggle-text'),
+                selectTextPos: document.getElementById('select-text-pos'),
+                textInputsWrap: document.getElementById('text-inputs-wrap'),
+                inputTitle: document.getElementById('input-title'),
+                inputSubtitle: document.getElementById('input-subtitle'),
+
+                // Audio
+                audioDropzone: document.getElementById('audio-dropzone'),
+                audioFileInput: document.getElementById('audio-file-input'),
+                audioListContainer: document.getElementById('audio-list-container'),
+                tracklistActions: document.getElementById('tracklist-actions'),
+                btnCopyTimestamps: document.getElementById('btn-copy-timestamps'),
+                btnClearAudio: document.getElementById('btn-clear-audio'),
+                totalDurationBadge: document.getElementById('total-duration-badge'),
+                selectDurationMode: document.getElementById('select-duration-mode'),
+                inputCustomMinutes: document.getElementById('input-custom-minutes'),
+                loopInfoText: document.getElementById('loop-info-text'),
+
+                // Render Controls
+                selectResolution: document.getElementById('select-resolution'),
+                selectFps: document.getElementById('select-fps'),
+                selectAudioBitrate: document.getElementById('select-audio-bitrate'),
+                tabBrowserRender: document.getElementById('tab-browser-render'),
+                tabTurboScript: document.getElementById('tab-turbo-script'),
+                panelBrowserRender: document.getElementById('panel-browser-render'),
+                panelTurboScript: document.getElementById('panel-turbo-script'),
+
+                ramWarning: document.getElementById('ram-warning'),
+                renderProgressBox: document.getElementById('render-progress-box'),
+                renderStatusText: document.getElementById('render-status-text'),
+                renderPercentText: document.getElementById('render-percent-text'),
+                renderProgressBar: document.getElementById('render-progress-bar'),
+                renderDetailText: document.getElementById('render-detail-text'),
+                btnCancelRender: document.getElementById('btn-cancel-render'),
+                renderResultBox: document.getElementById('render-result-box'),
+                resultMetaText: document.getElementById('result-meta-text'),
+                btnDownloadMp4: document.getElementById('btn-download-mp4'),
+                resultVideoPreview: document.getElementById('result-video-preview'),
+                btnStartRender: document.getElementById('btn-start-render'),
+
+                // Turbo Script
+                btnDownloadWinPack: document.getElementById('btn-download-win-pack'),
+                btnDownloadMacPack: document.getElementById('btn-download-mac-pack'),
+                btnCopyFfmpeg: document.getElementById('btn-copy-ffmpeg'),
+                ffmpegPreviewCode: document.getElementById('ffmpeg-preview-code'),
+            };
+
+            // =====================================================
+            // 3. UTILITAS UMUM (TOAST, FORMAT WAKTU, CLIPBOARD)
+            // =====================================================
+            function showToast(message, type = 'info') {
+                const colors = {
+                    info: 'bg-zinc-900 border-zinc-700 text-zinc-100',
+                    success: 'bg-emerald-950/95 border-emerald-500/40 text-emerald-200',
+                    error: 'bg-rose-950/95 border-rose-500/40 text-rose-200',
+                    warning: 'bg-amber-950/95 border-amber-500/40 text-amber-200'
+                };
+                const toast = document.createElement('div');
+                toast.className = `pointer-events-auto px-4 py-3 rounded-xl border text-xs font-medium shadow-2xl backdrop-blur-md transition-all duration-300 opacity-0 translate-y-2 ${colors[type] || colors.info}`;
+                toast.textContent = message;
+                els.toastContainer.appendChild(toast);
+
+                requestAnimationFrame(() => {
+                    toast.classList.remove('opacity-0', 'translate-y-2');
+                });
+
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', '-translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3800);
+            }
+
+            function formatTime(seconds) {
+                if (!isFinite(seconds) || seconds < 0) return '00:00:00';
+                const totalSec = Math.floor(seconds);
+                const h = Math.floor(totalSec / 3600);
+                const m = Math.floor((totalSec % 3600) / 60);
+                const s = totalSec % 60;
+                return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+            }
+
+            function formatShortTime(seconds) {
+                if (!isFinite(seconds) || seconds < 0) return '00:00';
+                const totalSec = Math.floor(seconds);
+                const h = Math.floor(totalSec / 3600);
+                const m = Math.floor((totalSec % 3600) / 60);
+                const s = totalSec % 60;
+                if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            function copyToClipboard(text) {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    return true;
+                } catch (err) {
+                    console.error('Gagal menyalin:', err);
+                    return false;
+                }
+            }
+
+            function sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            function formatBytes(bytes) {
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+            }
+
+            // =====================================================
+            // 4. CEK DUKUNGAN WEBCODECS
+            // =====================================================
+            function checkWebCodecsSupport() {
+                const supported = typeof VideoEncoder !== 'undefined' &&
+                                  typeof AudioEncoder !== 'undefined' &&
+                                  typeof Mp4Muxer !== 'undefined';
+                if (!supported) {
+                    els.codecBadge.className = 'hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                    els.codecBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Gunakan Mode Turbo PC';
+                }
+                return supported;
+            }
+
+            // =====================================================
+            // 5. MESIN GAMBAR COVER (CANVAS 16:9 RESPONSIF & HD)
+            // =====================================================
+            function renderCoverToCanvas(canvas, targetWidth, targetHeight) {
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+
+                // Latar belakang dasar gelap
+                ctx.fillStyle = '#09090b';
+                ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+                const img = state.coverImage;
+                if (img) {
+                    const imgRatio = img.width / img.height;
+                    const canvasRatio = targetWidth / targetHeight;
+                    const zoomFactor = state.zoom / 100;
+                    const offsetYpx = (state.offsetY / 100) * targetHeight * 0.5;
+
+                    if (state.fitMode === 'blur') {
+                        // 1. Latar belakang blur memenuhi layar
+                        ctx.save();
+                        const blurScale = Math.max(targetWidth / img.width, targetHeight / img.height) * 1.15;
+                        const bw = img.width * blurScale;
+                        const bh = img.height * blurScale;
+                        ctx.filter = `blur(${Math.round(targetWidth * 0.022)}px) brightness(0.45)`;
+                        ctx.drawImage(img, (targetWidth - bw) / 2, (targetHeight - bh) / 2, bw, bh);
+                        ctx.restore();
+
+                        // 2. Gambar utama di tengah dengan bayangan elegan
+                        const containScale = Math.min(targetWidth / img.width, targetHeight / img.height) * 0.88 * zoomFactor;
+                        const dw = img.width * containScale;
+                        const dh = img.height * containScale;
+                        const dx = (targetWidth - dw) / 2;
+                        const dy = (targetHeight - dh) / 2 + offsetYpx;
+
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+                        ctx.shadowBlur = Math.round(targetWidth * 0.03);
+                        ctx.shadowOffsetY = Math.round(targetHeight * 0.015);
+
+                        // Rounded corners untuk cover album
+                        const radius = Math.round(targetWidth * 0.012);
+                        ctx.beginPath();
+                        ctx.roundRect(dx, dy, dw, dh, radius);
+                        ctx.closePath();
+                        ctx.fillStyle = '#000';
+                        ctx.fill();
+                        ctx.clip();
+                        ctx.shadowColor = 'transparent';
+                        ctx.drawImage(img, dx, dy, dw, dh);
+                        ctx.restore();
+                    } else if (state.fitMode === 'cover') {
+                        // Penuh 16:9 (Crop otomatis)
+                        const coverScale = Math.max(targetWidth / img.width, targetHeight / img.height) * zoomFactor;
+                        const dw = img.width * coverScale;
+                        const dh = img.height * coverScale;
+                        const dx = (targetWidth - dw) / 2;
+                        const dy = (targetHeight - dh) / 2 + offsetYpx;
+                        ctx.drawImage(img, dx, dy, dw, dh);
+                    } else {
+                        // Fit Polos (Hitam)
+                        const containScale = Math.min(targetWidth / img.width, targetHeight / img.height) * zoomFactor;
+                        const dw = img.width * containScale;
+                        const dh = img.height * containScale;
+                        const dx = (targetWidth - dw) / 2;
+                        const dy = (targetHeight - dh) / 2 + offsetYpx;
+                        ctx.drawImage(img, dx, dy, dw, dh);
+                    }
+                } else {
+                    // Tampilan default elegan sebelum upload
+                    const grad = ctx.createLinearGradient(0, 0, targetWidth, targetHeight);
+                    grad.addColorStop(0, '#18181f');
+                    grad.addColorStop(1, '#0c0c10');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, targetWidth, targetHeight);
+                }
+
+                // Overlay Gelap / Vignette
+                if (state.dim > 0 && img) {
+                    const alpha = state.dim / 100;
+                    const grad = ctx.createRadialGradient(
+                        targetWidth / 2, targetHeight / 2, targetWidth * 0.15,
+                        targetWidth / 2, targetHeight / 2, targetWidth * 0.72
+                    );
+                    grad.addColorStop(0, `rgba(0,0,0,${alpha * 0.45})`);
+                    grad.addColorStop(1, `rgba(0,0,0,${Math.min(0.92, alpha * 1.25)})`);
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, targetWidth, targetHeight);
+                }
+
+                // Teks Cover (Opsional)
+                if (state.showText && (state.titleText.trim() || state.subtitleText.trim())) {
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    const titleSize = Math.round(targetWidth * 0.042);
+                    const subSize = Math.round(targetWidth * 0.02);
+
+                    let baseY = targetHeight * 0.84;
+                    if (state.textPos === 'top') baseY = targetHeight * 0.15;
+                    if (state.textPos === 'center') baseY = targetHeight * 0.5;
+
+                    // Gradient pelindung teks di bawah/atas
+                    if (state.textPos === 'bottom') {
+                        const tGrad = ctx.createLinearGradient(0, targetHeight * 0.62, 0, targetHeight);
+                        tGrad.addColorStop(0, 'rgba(0,0,0,0)');
+                        tGrad.addColorStop(1, 'rgba(0,0,0,0.72)');
+                        ctx.fillStyle = tGrad;
+                        ctx.fillRect(0, targetHeight * 0.62, targetWidth, targetHeight * 0.38);
+                    }
+
+                    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+                    ctx.shadowBlur = Math.round(targetWidth * 0.015);
+                    ctx.shadowOffsetY = Math.round(targetHeight * 0.004);
+
+                    if (state.titleText.trim()) {
+                        ctx.font = `800 ${titleSize}px Inter, system-ui, sans-serif`;
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(state.titleText.trim(), targetWidth / 2, baseY, targetWidth * 0.88);
+                    }
+
+                    if (state.subtitleText.trim()) {
+                        ctx.font = `500 ${subSize}px Inter, system-ui, sans-serif`;
+                        ctx.fillStyle = 'rgba(228, 228, 231, 0.92)';
+                        const subY = state.titleText.trim() ? baseY + titleSize * 0.95 : baseY;
+                        ctx.fillText(state.subtitleText.trim(), targetWidth / 2, subY, targetWidth * 0.85);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            function updatePreview() {
+                // Render preview di resolusi 1280x720 agar tetap tajam & sangat ringan
+                renderCoverToCanvas(els.previewCanvas, 1280, 720);
+            }
+
+            // =====================================================
+            // 6. HANDLE UPLOAD COVER
+            // =====================================================
+            function loadCoverFile(file) {
+                if (!file || !file.type.startsWith('image/')) {
+                    showToast('Pilih file gambar (JPG, PNG, atau WEBP).', 'error');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        state.coverImage = img;
+                        state.coverFileName = file.name;
+                        els.coverEmptyOverlay.classList.add('hidden');
+                        els.btnChangeCover.classList.remove('hidden');
+                        updatePreview();
+                        updateFfmpegScriptPreview();
+                        showToast('Cover berhasil dipasang ke rasio 16:9!', 'success');
+                    };
+                    img.onerror = () => showToast('Gagal membaca file gambar.', 'error');
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // =====================================================
+            // 7. HANDLE AUDIO & DURASI (HINGGA 2+ JAM)
+            // =====================================================
+            function getAudioDuration(file) {
+                return new Promise((resolve) => {
+                    const audio = document.createElement('audio');
+                    const url = URL.createObjectURL(file);
+                    audio.preload = 'metadata';
+                    audio.onloadedmetadata = () => {
+                        const dur = isFinite(audio.duration) ? audio.duration : 0;
+                        URL.revokeObjectURL(url);
+                        resolve(dur);
+                    };
+                    audio.onerror = () => {
+                        URL.revokeObjectURL(url);
+                        resolve(0);
+                    };
+                    audio.src = url;
+                });
+            }
+
+            async function handleAudioFiles(fileList) {
+                const files = Array.from(fileList).filter(f => f.type.startsWith('audio/') || /\.(mp3|wav|m4a|ogg|flac|aac)$/i.test(f.name));
+                if (files.length === 0) {
+                    showToast('Format audio tidak dikenali. Gunakan MP3, WAV, M4A, atau OGG.', 'error');
+                    return;
+                }
+
+                for (const file of files) {
+                    const duration = await getAudioDuration(file);
+                    state.audioTracks.push({
+                        id: 'trk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                        file,
+                        name: file.name,
+                        duration
+                    });
+                }
+
+                renderAudioList();
+                updateDurationStats();
+                updateFfmpegScriptPreview();
+                showToast(`${files.length} file musik ditambahkan.`, 'success');
+            }
+
+            function getOriginalTotalDuration() {
+                return state.audioTracks.reduce((sum, t) => sum + (t.duration || 0), 0);
+            }
+
+            function getTargetTotalDuration() {
+                const orig = getOriginalTotalDuration();
+                if (orig <= 0) return 0;
+                if (state.durationMode === 'original') return orig;
+                if (state.durationMode === 'custom') return Math.max(1, Number(state.customMinutes) || 1) * 60;
+                return Number(state.durationMode) * 60;
+            }
+
+            function updateDurationStats() {
+                const orig = getOriginalTotalDuration();
+                const target = getTargetTotalDuration();
+                els.totalDurationBadge.textContent = formatTime(target);
+
+                if (orig <= 0) {
+                    els.loopInfoText.textContent = 'Belum ada musik';
+                } else if (state.durationMode === 'original') {
+                    els.loopInfoText.textContent = `${state.audioTracks.length} lagu • Tanpa loop`;
+                } else {
+                    const loops = Math.ceil(target / orig);
+                    els.loopInfoText.textContent = `Asli ${formatShortTime(orig)} → Loop ~${loops}x`;
+                }
+
+                // Tampilkan peringatan RAM jika durasi > 45 menit di mode browser
+                if (target > 45 * 60) {
+                    els.ramWarning.classList.remove('hidden');
+                } else {
+                    els.ramWarning.classList.add('hidden');
+                }
+            }
+
+            function renderAudioList() {
+                const container = els.audioListContainer;
+                if (state.audioTracks.length === 0) {
+                    container.classList.add('hidden');
+                    els.tracklistActions.classList.add('hidden');
+                    container.innerHTML = '';
+                    return;
+                }
+
+                container.classList.remove('hidden');
+                els.tracklistActions.classList.remove('hidden');
+                container.innerHTML = '';
+
+                state.audioTracks.forEach((track, idx) => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-studio-850 border border-zinc-800/80 text-xs';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 w-4 shrink-0">${idx + 1}.</span>
+                            <span class="truncate text-zinc-200 font-medium" title="${track.name}">${track.name}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <span class="text-[11px] font-mono text-zinc-400 mr-1">${formatShortTime(track.duration)}</span>
+                            <button type="button" data-action="up" data-idx="${idx}" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white cursor-pointer" title="Naik">↑</button>
+                            <button type="button" data-action="down" data-idx="${idx}" class="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white cursor-pointer" title="Turun">↓</button>
+                            <button type="button" data-action="del" data-idx="${idx}" class="p-1 rounded hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 cursor-pointer" title="Hapus">✕</button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            // =====================================================
+            // 8. MESIN RENDER CEPAT DI BROWSER (WEBCODECS + MP4-MUXER)
+            // =====================================================
+            async function findSupportedVideoConfig(width, height, fps) {
+                const candidates = [
+                    'avc1.4d002a', // Main Profile L4.2 (1080p)
+                    'avc1.640028', // High Profile L4.0 (1080p)
+                    'avc1.420028', // Baseline L4.0 (1080p)
+                    'avc1.42E01F'  // Baseline L3.1 (720p)
+                ];
+                const bitrate = width >= 1920 ? 1_500_000 : 1_000_000;
+
+                for (const codec of candidates) {
+                    const config = {
+                        codec,
+                        width,
+                        height,
+                        bitrate,
+                        framerate: fps
+                    };
+                    try {
+                        const res = await VideoEncoder.isConfigSupported(config);
+                        if (res.supported) return config;
+                    } catch (_) {}
+                }
+                return null;
+            }
+
+            function setRenderProgress(percent, status, detail) {
+                const pct = Math.min(100, Math.max(0, Math.round(percent)));
+                els.renderProgressBar.style.width = `${pct}%`;
+                els.renderPercentText.textContent = `${pct}%`;
+                if (status) els.renderStatusText.textContent = status;
+                if (detail) els.renderDetailText.textContent = detail;
+            }
+
+            async function startBrowserRender() {
+                if (state.isRendering) return;
+
+                if (!checkWebCodecsSupport()) {
+                    showToast('Browser ini belum mendukung WebCodecs MP4. Gunakan Chrome/Edge terbaru atau pakai Tab Turbo PC.', 'error');
+                    return;
+                }
+                if (!state.coverImage) {
+                    showToast('Pasang gambar cover terlebih dahulu!', 'warning');
+                    return;
+                }
+                if (state.audioTracks.length === 0) {
+                    showToast('Tambahkan minimal 1 file musik terlebih dahulu!', 'warning');
+                    return;
+                }
+
+                const [width, height] = els.selectResolution.value.split('x').map(Number);
+                const fps = Number(els.selectFps.value) || 1;
+                const audioBitrate = Number(els.selectAudioBitrate.value) || 192000;
+                const targetDurationSec = getTargetTotalDuration();
+
+                if (targetDurationSec <= 0) {
+                    showToast('Durasi audio tidak valid.', 'error');
+                    return;
+                }
+
+                // Reset UI Render
+                state.isRendering = true;
+                state.cancelRequested = false;
+                els.btnStartRender.disabled = true;
+                els.renderResultBox.classList.add('hidden');
+                els.renderProgressBox.classList.remove('hidden');
+                setRenderProgress(1, 'Memeriksa codec perangkat...', `${width}×${height} @ ${fps} FPS`);
+
+                const startTimeMs = performance.now();
+                let audioCtx = null;
+
+                try {
+                    const videoConfig = await findSupportedVideoConfig(width, height, fps);
+                    if (!videoConfig) {
+                        throw new Error('Codec H.264 tidak didukung pada resolusi ini di browser Anda.');
+                    }
+
+                    // 1. Decode semua track audio ke sampleRate seragam (44100 Hz)
+                    const SAMPLE_RATE = 44100;
+                    const CHANNELS = 2;
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+
+                    const decodedBuffers = [];
+                    for (let i = 0; i < state.audioTracks.length; i++) {
+                        if (state.cancelRequested) throw new Error('CANCELLED');
+                        const track = state.audioTracks[i];
+                        setRenderProgress(
+                            3 + (i / state.audioTracks.length) * 17,
+                            `Membaca audio (${i + 1}/${state.audioTracks.length})...`,
+                            track.name
+                        );
+
+                        if (track.audioBuffer && track.audioBuffer.sampleRate === SAMPLE_RATE) {
+                            decodedBuffers.push(track.audioBuffer);
+                        } else {
+                            const arrayBuf = await track.file.arrayBuffer();
+                            const decoded = await audioCtx.decodeAudioData(arrayBuf);
+                            decodedBuffers.push(decoded);
+                        }
+                        await sleep(0);
+                    }
+
+                    // Hitung durasi aktual jika mode original
+                    const actualOrigDuration = decodedBuffers.reduce((s, b) => s + b.duration, 0);
+                    const finalDurationSec = state.durationMode === 'original' ? actualOrigDuration : targetDurationSec;
+
+                    // 2. Siapkan Muxer MP4
+                    const muxer = new Mp4Muxer.Muxer({
+                        target: new Mp4Muxer.ArrayBufferTarget(),
+                        video: {
+                            codec: 'avc',
+                            width,
+                            height
+                        },
+                        audio: {
+                            codec: 'aac',
+                            numberOfChannels: CHANNELS,
+                            sampleRate: SAMPLE_RATE
+                        },
+                        fastStart: 'in-memory',
+                        firstTimestampBehavior: 'offset'
+                    });
+
+                    let encoderError = null;
+
+                    const videoEncoder = new VideoEncoder({
+                        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+                        error: (e) => { encoderError = e; }
+                    });
+                    videoEncoder.configure(videoConfig);
+
+                    const audioEncoder = new AudioEncoder({
+                        output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+                        error: (e) => { encoderError = e; }
+                    });
+                    audioEncoder.configure({
+                        codec: 'mp4a.40.2',
+                        numberOfChannels: CHANNELS,
+                        sampleRate: SAMPLE_RATE,
+                        bitrate: audioBitrate
+                    });
+
+                    // 3. Render 1 kali Cover HD ke Offscreen Canvas
+                    const exportCanvas = document.createElement('canvas');
+                    renderCoverToCanvas(exportCanvas, width, height);
+
+                    // 4. Encode Video (Super Cepat karena 1-2 FPS Statis)
+                    const totalFrames = Math.max(1, Math.ceil(finalDurationSec * fps));
+                    const frameDurationUs = Math.round(1_000_000 / fps);
+                    const keyFrameInterval = Math.max(1, fps * 10); // Keyframe tiap 10 detik
+
+                    for (let i = 0; i < totalFrames; i++) {
+                        if (state.cancelRequested) throw new Error('CANCELLED');
+                        if (encoderError) throw encoderError;
+
+                        while (videoEncoder.encodeQueueSize > 8) {
+                            await sleep(8);
+                            if (state.cancelRequested) throw new Error('CANCELLED');
+                        }
+
+                        const frame = new VideoFrame(exportCanvas, {
+                            timestamp: i * frameDurationUs,
+                            duration: frameDurationUs
+                        });
+                        videoEncoder.encode(frame, { keyFrame: i === 0 || i % keyFrameInterval === 0 });
+                        frame.close();
+
+                        if (i % 15 === 0 || i === totalFrames - 1) {
+                            const pct = 20 + ((i + 1) / totalFrames) * 35;
+                            setRenderProgress(
+                                pct,
+                                'Merender Video Cover...',
+                                `Frame ${i + 1} / ${totalFrames} (${fps} FPS)`
+                            );
+                            await sleep(0);
+                        }
+                    }
+
+                    await videoEncoder.flush();
+                    videoEncoder.close();
+
+                    // 5. Encode Audio dalam potongan kecil (hemat RAM, mendukung Auto-Loop 2 Jam)
+                    const targetTotalSamples = Math.floor(finalDurationSec * SAMPLE_RATE);
+                    const CHUNK_FRAMES = 16384;
+                    let encodedSamples = 0;
+                    let trackIdx = 0;
+                    let sampleOffsetInTrack = 0;
+                    let loopCounter = 0;
+
+                    while (encodedSamples < targetTotalSamples) {
+                        if (state.cancelRequested) throw new Error('CANCELLED');
+                        if (encoderError) throw encoderError;
+
+                        const buf = decodedBuffers[trackIdx];
+                        const remainingInTrack = buf.length - sampleOffsetInTrack;
+                        const remainingGlobal = targetTotalSamples - encodedSamples;
+                        const framesToCopy = Math.min(CHUNK_FRAMES, remainingInTrack, remainingGlobal);
+
+                        if (framesToCopy <= 0) {
+                            trackIdx = (trackIdx + 1) % decodedBuffers.length;
+                            sampleOffsetInTrack = 0;
+                            continue;
+                        }
+
+                        while (audioEncoder.encodeQueueSize > 16) {
+                            await sleep(5);
+                            if (state.cancelRequested) throw new Error('CANCELLED');
+                        }
+
+                        // Susun data planar Stereo Float32
+                        const planarData = new Float32Array(framesToCopy * CHANNELS);
+                        const ch0 = buf.getChannelData(0);
+                        const ch1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : ch0;
+
+                        planarData.set(ch0.subarray(sampleOffsetInTrack, sampleOffsetInTrack + framesToCopy), 0);
+                        planarData.set(ch1.subarray(sampleOffsetInTrack, sampleOffsetInTrack + framesToCopy), framesToCopy);
+
+                        const audioData = new AudioData({
+                            format: 'f32-planar',
+                            sampleRate: SAMPLE_RATE,
+                            numberOfFrames: framesToCopy,
+                            numberOfChannels: CHANNELS,
+                            timestamp: Math.round((encodedSamples / SAMPLE_RATE) * 1_000_000),
+                            data: planarData
+                        });
+
+                        audioEncoder.encode(audioData);
+                        audioData.close();
+
+                        encodedSamples += framesToCopy;
+                        sampleOffsetInTrack += framesToCopy;
+
+                        if (sampleOffsetInTrack >= buf.length) {
+                            sampleOffsetInTrack = 0;
+                            trackIdx = (trackIdx + 1) % decodedBuffers.length;
+                        }
+
+                        loopCounter++;
+                        if (loopCounter % 25 === 0 || encodedSamples >= targetTotalSamples) {
+                            const pct = 55 + (encodedSamples / targetTotalSamples) * 40;
+                            setRenderProgress(
+                                pct,
+                                'Menggabungkan Audio AAC...',
+                                `${formatTime(encodedSamples / SAMPLE_RATE)} / ${formatTime(finalDurationSec)}`
+                            );
+                            await sleep(0);
+                        }
+                    }
+
+                    await audioEncoder.flush();
+                    audioEncoder.close();
+
+                    // 6. Finalisasi File MP4
+                    setRenderProgress(97, 'Menyusun file MP4 siap YouTube...', 'Hampir selesai...');
+                    await sleep(20);
+
+                    muxer.finalize();
+                    const mp4Buffer = muxer.target.buffer;
+                    const blob = new Blob([mp4Buffer], { type: 'video/mp4' });
+
+                    if (state.lastResultUrl) URL.revokeObjectURL(state.lastResultUrl);
+                    state.lastResultUrl = URL.createObjectURL(blob);
+
+                    const elapsedSec = ((performance.now() - startTimeMs) / 1000).toFixed(1);
+                    const safeTitle = (state.titleText.trim() || 'youtube_music_video').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+                    els.btnDownloadMp4.href = state.lastResultUrl;
+                    els.btnDownloadMp4.download = `${safeTitle}_${width}p.mp4`;
+                    els.resultVideoPreview.src = state.lastResultUrl;
+                    els.resultMetaText.textContent = `Durasi ${formatTime(finalDurationSec)} • Ukuran ${formatBytes(blob.size)} • Selesai dalam ${elapsedSec} dtk`;
+
+                    setRenderProgress(100, 'Selesai!', `Render tuntas dalam ${elapsedSec} detik`);
+                    els.renderResultBox.classList.remove('hidden');
+                    showToast(`Video MP4 selesai dirender dalam ${elapsedSec} detik!`, 'success');
+
+                } catch (err) {
+                    if (err && err.message === 'CANCELLED') {
+                        showToast('Proses render dibatalkan.', 'warning');
+                        els.renderProgressBox.classList.add('hidden');
+                    } else {
+                        console.error('Render error:', err);
+                        showToast('Gagal render di browser: ' + (err.message || 'Kesalahan tidak diketahui'), 'error');
+                        setRenderProgress(0, 'Render Gagal', err.message || 'Coba gunakan Mode Turbo PC');
+                    }
+                } finally {
+                    if (audioCtx) {
+                        try { await audioCtx.close(); } catch (_) {}
+                    }
+                    state.isRendering = false;
+                    els.btnStartRender.disabled = false;
+                }
+            }
+
+            // =====================================================
+            // 9. GENERATOR SCRIPT TURBO PC (FFMPEG 1-KLIK UNTUK 2 JAM+)
+            // =====================================================
+            function buildFfmpegCommand(osType = 'win') {
+                const [w, h] = els.selectResolution.value.split('x');
+                const fps = els.selectFps.value || '1';
+                const targetSec = Math.round(getTargetTotalDuration());
+                const firstAudio = state.audioTracks.length > 0 ? state.audioTracks[0].name : 'musik_anda.mp3';
+                const outName = (state.titleText.trim() || 'youtube_music_2jam').replace(/[^a-zA-Z0-9_-]/g, '_') + '.mp4';
+
+                // Jika hanya 1 file audio & tanpa loop
+                if (state.audioTracks.length <= 1 && state.durationMode === 'original') {
+                    return `ffmpeg -y -loop 1 -framerate ${fps} -i "cover_yt.png" -i "${firstAudio}" -c:v libx264 -tune stillimage -pix_fmt yuv420p -vf "scale=${w}:${h}" -c:a copy -shortest -movflags +faststart "${outName}"`;
+                }
+
+                // Jika loop 1 file ke target durasi (misal 2 jam)
+                if (state.audioTracks.length === 1 && state.durationMode !== 'original') {
+                    return `ffmpeg -y -loop 1 -framerate ${fps} -i "cover_yt.png" -stream_loop -1 -i "${firstAudio}" -t ${targetSec} -c:v libx264 -tune stillimage -pix_fmt yuv420p -vf "scale=${w}:${h}" -c:a copy -movflags +faststart "${outName}"`;
+                }
+
+                // Jika banyak lagu (playlist)
+                const durationFlag = state.durationMode !== 'original' ? `-t ${targetSec}` : '-shortest';
+                const loopFlag = state.durationMode !== 'original' ? '-stream_loop -1 ' : '';
+                return `ffmpeg -y -loop 1 -framerate ${fps} -i "cover_yt.png" ${loopFlag}-f concat -safe 0 -i "playlist.txt" ${durationFlag} -c:v libx264 -tune stillimage -pix_fmt yuv420p -vf "scale=${w}:${h}" -c:a aac -b:a 192k -movflags +faststart "${outName}"`;
+            }
+
+            function updateFfmpegScriptPreview() {
+                els.ffmpegPreviewCode.textContent = buildFfmpegCommand('win');
+            }
+
+            function downloadCoverPng(filename = 'cover_yt.png') {
+                const [w, h] = els.selectResolution.value.split('x').map(Number);
+                const off = document.createElement('canvas');
+                renderCoverToCanvas(off, w, h);
+                off.toBlob((blob) => {
+                    if (!blob) return;
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }, 'image/png');
+            }
+
+            function downloadTextFile(filename, content) {
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }
+
+            function exportTurboPack(osType) {
+                if (!state.coverImage) {
+                    showToast('Pasang gambar cover terlebih dahulu agar ikut terunduh!', 'warning');
+                    return;
+                }
+                // 1. Download cover_yt.png sesuai resolusi
+                downloadCoverPng('cover_yt.png');
+
+                const cmd = buildFfmpegCommand(osType);
+                const isMulti = state.audioTracks.length > 1;
+
+                if (osType === 'win') {
+                    let bat = '@echo off\r\nchcp 65001 >nul\r\necho ==========================================\r\necho   COVER VIDEO STUDIO - TURBO RENDER PC\r\necho ==========================================\r\n';
+                    if (isMulti) {
+                        bat += 'echo Membuat daftar playlist.txt...\r\n';
+                        bat += '(\r\n';
+                        state.audioTracks.forEach(t => {
+                            bat += `  echo file '${t.name.replace(/'/g, "'\\''")}'\r\n`;
+                        });
+                        bat += ') > playlist.txt\r\n';
+                    }
+                    bat += 'echo Memulai render super cepat...\r\n';
+                    bat += cmd + '\r\n';
+                    bat += 'echo.\r\necho SELESAI! Video MP4 siap diupload ke YouTube.\r\npause\r\n';
+                    setTimeout(() => downloadTextFile('RENDER_YOUTUBE.bat', bat), 350);
+                    showToast('Cover PNG & RENDER_YOUTUBE.bat berhasil diunduh!', 'success');
+                } else {
+                    let sh = '#!/bin/bash\necho "=== COVER VIDEO STUDIO - TURBO RENDER ==="\n';
+                    if (isMulti) {
+                        sh += 'cat << \'EOF\' > playlist.txt\n';
+                        state.audioTracks.forEach(t => {
+                            sh += `file '${t.name.replace(/'/g, "'\\''")}'\n`;
+                        });
+                        sh += 'EOF\n';
+                    }
+                    sh += cmd + '\necho "SELESAI! Video MP4 siap diupload ke YouTube."\n';
+                    setTimeout(() => downloadTextFile('render_youtube.sh', sh), 350);
+                    showToast('Cover PNG & render_youtube.sh berhasil diunduh!', 'success');
+                }
+            }
+
+            // =====================================================
+            // 10. MODE DEMO CEPAT (TANPA PERLU UPLOAD FILE)
+            // =====================================================
+            function loadDemoProject() {
+                // 1. Buat gambar cover album estetik secara prosedural
+                const demoCanvas = document.createElement('canvas');
+                demoCanvas.width = 1080;
+                demoCanvas.height = 1080;
+                const ctx = demoCanvas.getContext('2d');
+
+                const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
+                grad.addColorStop(0, '#312e81');
+                grad.addColorStop(0.5, '#6d28d9');
+                grad.addColorStop(1, '#be123c');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 1080, 1080);
+
+                // Lingkaran bulan & gelombang estetik
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+                ctx.beginPath();
+                ctx.arc(540, 420, 210, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fef3c7';
+                ctx.beginPath();
+                ctx.arc(540, 420, 130, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(9, 9, 11, 0.55)';
+                ctx.beginPath();
+                ctx.moveTo(0, 740);
+                ctx.quadraticCurveTo(270, 620, 540, 740);
+                ctx.quadraticCurveTo(810, 860, 1080, 700);
+                ctx.lineTo(1080, 1080);
+                ctx.lineTo(0, 1080);
+                ctx.closePath();
+                ctx.fill();
+
+                const img = new Image();
+                img.onload = () => {
+                    state.coverImage = img;
+                    state.fitMode = 'blur';
+                    state.showText = true;
+                    state.titleText = 'Midnight Lofi Chill Beats';
+                    state.subtitleText = '2 Hours Relaxing Music for Study & Sleep';
+
+                    els.toggleText.checked = true;
+                    els.textInputsWrap.classList.remove('opacity-50', 'pointer-events-none');
+                    els.inputTitle.value = state.titleText;
+                    els.inputSubtitle.value = state.subtitleText;
+                    els.coverEmptyOverlay.classList.add('hidden');
+                    els.btnChangeCover.classList.remove('hidden');
+                    updatePreview();
+                };
+                img.src = demoCanvas.toDataURL('image/png');
+
+                // 2. Buat audio ambient lembut 8 detik (sintesis langsung di memori)
+                try {
+                    const sampleRate = 44100;
+                    const duration = 8;
+                    const length = sampleRate * duration;
+                    const tempCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
+                    const audioBuffer = tempCtx.createBuffer(2, length, sampleRate);
+                    const freqs = [220, 261.63, 329.63, 392.0]; // Am7 chord
+
+                    for (let ch = 0; ch < 2; ch++) {
+                        const data = audioBuffer.getChannelData(ch);
+                        for (let i = 0; i < length; i++) {
+                            const t = i / sampleRate;
+                            const env = Math.min(1, t / 0.8) * Math.min(1, (duration - t) / 1.0);
+                            let val = 0;
+                            for (let f = 0; f < freqs.length; f++) {
+                                const detune = ch === 0 ? 1 : 1.002;
+                                val += Math.sin(2 * Math.PI * freqs[f] * detune * t) * 0.14;
+                            }
+                            data[i] = val * env;
+                        }
+                    }
+                    tempCtx.close();
+
+                    state.audioTracks = [{
+                        id: 'demo_trk',
+                        file: null,
+                        name: 'Demo_Ambient_Lofi_8s.wav',
+                        duration: duration,
+                        audioBuffer
+                    }];
+                    state.durationMode = 'original';
+                    els.selectDurationMode.value = 'original';
+                    els.inputCustomMinutes.classList.add('hidden');
+
+                    renderAudioList();
+                    updateDurationStats();
+                    updateFfmpegScriptPreview();
+                    showToast('Demo Cover + Musik 8 detik siap! Klik "Render Video MP4 Sekarang" untuk mencoba.', 'success');
+                } catch (e) {
+                    showToast('Gagal membuat audio demo.', 'error');
+                }
+            }
+
+            // =====================================================
+            // 11. EVENT LISTENERS
+            // =====================================================
+            // Cover upload & drag-drop
+            els.coverEmptyOverlay.addEventListener('click', () => els.coverFileInput.click());
+            els.btnChangeCover.addEventListener('click', () => els.coverFileInput.click());
+            els.coverFileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) loadCoverFile(e.target.files[0]);
+                e.target.value = '';
+            });
+
+            ['dragenter', 'dragover'].forEach(evt => {
+                els.coverDropzone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    els.coverDropzone.classList.add('border-indigo-500');
+                });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                els.coverDropzone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    els.coverDropzone.classList.remove('border-indigo-500');
+                });
+            });
+            els.coverDropzone.addEventListener('drop', (e) => {
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) loadCoverFile(e.dataTransfer.files[0]);
+            });
+
+            // Mode fit cover
+            els.fitModeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.fitMode = btn.dataset.fit;
+                    els.fitModeBtns.forEach(b => {
+                        const active = b.dataset.fit === state.fitMode;
+                        b.className = `fit-mode-btn px-3 py-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                            active
+                                ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
+                                : 'bg-studio-850 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+                        }`;
+                    });
+                    updatePreview();
+                });
+            });
+
+            // Sliders cover
+            els.rangeZoom.addEventListener('input', (e) => {
+                state.zoom = Number(e.target.value);
+                els.valZoom.textContent = `${state.zoom}%`;
+                updatePreview();
+            });
+            els.rangeOffsetY.addEventListener('input', (e) => {
+                state.offsetY = Number(e.target.value);
+                els.valOffsetY.textContent = `${state.offsetY}%`;
+                updatePreview();
+            });
+            els.rangeDim.addEventListener('input', (e) => {
+                state.dim = Number(e.target.value);
+                els.valDim.textContent = `${state.dim}%`;
+                updatePreview();
+            });
+
+            // Teks cover
+            els.toggleText.addEventListener('change', (e) => {
+                state.showText = e.target.checked;
+                if (state.showText) {
+                    els.textInputsWrap.classList.remove('opacity-50', 'pointer-events-none');
+                } else {
+                    els.textInputsWrap.classList.add('opacity-50', 'pointer-events-none');
+                }
+                updatePreview();
+            });
+            els.selectTextPos.addEventListener('change', (e) => {
+                state.textPos = e.target.value;
+                updatePreview();
+            });
+            els.inputTitle.addEventListener('input', (e) => {
+                state.titleText = e.target.value;
+                updatePreview();
+                updateFfmpegScriptPreview();
+            });
+            els.inputSubtitle.addEventListener('input', (e) => {
+                state.subtitleText = e.target.value;
+                updatePreview();
+            });
+
+            // Download cover PNG saja
+            els.btnDownloadCover.addEventListener('click', () => {
+                if (!state.coverImage) {
+                    showToast('Upload gambar cover terlebih dahulu.', 'warning');
+                    return;
+                }
+                downloadCoverPng('cover_youtube_16x9.png');
+                showToast('Cover 16:9 PNG berhasil disimpan!', 'success');
+            });
+
+            // Audio upload & drag-drop
+            els.audioDropzone.addEventListener('click', () => els.audioFileInput.click());
+            els.audioFileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length) handleAudioFiles(e.target.files);
+                e.target.value = '';
+            });
+            ['dragenter', 'dragover'].forEach(evt => {
+                els.audioDropzone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    els.audioDropzone.classList.add('border-rose-500');
+                });
+            });
+            ['dragleave', 'drop'].forEach(evt => {
+                els.audioDropzone.addEventListener(evt, (e) => {
+                    e.preventDefault();
+                    els.audioDropzone.classList.remove('border-rose-500');
+                });
+            });
+            els.audioDropzone.addEventListener('drop', (e) => {
+                if (e.dataTransfer.files && e.dataTransfer.files.length) handleAudioFiles(e.dataTransfer.files);
+            });
+
+            // Aksi item daftar audio (naik, turun, hapus)
+            els.audioListContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-action]');
+                if (!btn) return;
+                const idx = Number(btn.dataset.idx);
+                const action = btn.dataset.action;
+
+                if (action === 'del') {
+                    state.audioTracks.splice(idx, 1);
+                } else if (action === 'up' && idx > 0) {
+                    [state.audioTracks[idx - 1], state.audioTracks[idx]] = [state.audioTracks[idx], state.audioTracks[idx - 1]];
+                } else if (action === 'down' && idx < state.audioTracks.length - 1) {
+                    [state.audioTracks[idx + 1], state.audioTracks[idx]] = [state.audioTracks[idx], state.audioTracks[idx + 1]];
+                }
+                renderAudioList();
+                updateDurationStats();
+                updateFfmpegScriptPreview();
+            });
+
+            els.btnClearAudio.addEventListener('click', () => {
+                state.audioTracks = [];
+                renderAudioList();
+                updateDurationStats();
+                updateFfmpegScriptPreview();
+            });
+
+            // Salin Timestamp YouTube otomatis
+            els.btnCopyTimestamps.addEventListener('click', () => {
+                if (state.audioTracks.length === 0) return;
+                let cursor = 0;
+                const lines = state.audioTracks.map(t => {
+                    const ts = formatShortTime(cursor);
+                    cursor += t.duration || 0;
+                    const cleanName = t.name.replace(/\.[^/.]+$/, '');
+                    return `${ts} ${cleanName}`;
+                });
+                if (copyToClipboard(lines.join('\n'))) {
+                    showToast('Timestamp tracklist YouTube berhasil disalin!', 'success');
+                }
+            });
+
+            // Target Durasi / Auto-Loop
+            els.selectDurationMode.addEventListener('change', (e) => {
+                state.durationMode = e.target.value;
+                if (state.durationMode === 'custom') {
+                    els.inputCustomMinutes.classList.remove('hidden');
+                } else {
+                    els.inputCustomMinutes.classList.add('hidden');
+                }
+                updateDurationStats();
+                updateFfmpegScriptPreview();
+            });
+            els.inputCustomMinutes.addEventListener('input', (e) => {
+                state.customMinutes = Number(e.target.value) || 60;
+                updateDurationStats();
+                updateFfmpegScriptPreview();
+            });
+
+            // Pengaturan render berubah
+            [els.selectResolution, els.selectFps, els.selectAudioBitrate].forEach(sel => {
+                sel.addEventListener('change', updateFfmpegScriptPreview);
+            });
+
+            // Tab Switcher (Render Browser vs Turbo PC)
+            els.tabBrowserRender.addEventListener('click', () => {
+                els.tabBrowserRender.className = 'py-2 px-3 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow transition cursor-pointer';
+                els.tabTurboScript.className = 'py-2 px-3 rounded-lg text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition cursor-pointer';
+                els.panelBrowserRender.classList.remove('hidden');
+                els.panelTurboScript.classList.add('hidden');
+            });
+            els.tabTurboScript.addEventListener('click', () => {
+                els.tabTurboScript.className = 'py-2 px-3 rounded-lg text-xs font-semibold bg-emerald-600 text-white shadow transition cursor-pointer';
+                els.tabBrowserRender.className = 'py-2 px-3 rounded-lg text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition cursor-pointer';
+                els.panelTurboScript.classList.remove('hidden');
+                els.panelBrowserRender.classList.add('hidden');
+                updateFfmpegScriptPreview();
+            });
+
+            // Tombol Render & Batal
+            els.btnStartRender.addEventListener('click', startBrowserRender);
+            els.btnCancelRender.addEventListener('click', () => {
+                state.cancelRequested = true;
+            });
+
+            // Tombol Turbo PC
+            els.btnDownloadWinPack.addEventListener('click', () => exportTurboPack('win'));
+            els.btnDownloadMacPack.addEventListener('click', () => exportTurboPack('mac'));
+            els.btnCopyFfmpeg.addEventListener('click', () => {
+                if (copyToClipboard(els.ffmpegPreviewCode.textContent)) {
+                    showToast('Perintah FFmpeg disalin ke clipboard!', 'success');
+                }
+            });
+
+            // Tombol Demo
+            els.btnLoadDemo.addEventListener('click', loadDemoProject);
+
+            // Inisialisasi Awal
+            checkWebCodecsSupport();
+            updatePreview();
+            updateDurationStats();
+            updateFfmpegScriptPreview();
+        })();
+    </script>
+</body>
+</html>
+```
